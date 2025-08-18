@@ -1,0 +1,20 @@
+{
+  "name": "ebay-search-backend",
+  "version": "1.0.0",
+  "description": "Vercel backend for eBay search using SERPAPI",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "vercel build",
+    "deploy": "vercel"
+  },
+  "dependencies": {
+    "serpapi": "^2.0.0"
+  },
+  "devDependencies": {
+    "vercel": "^32.0.0"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
