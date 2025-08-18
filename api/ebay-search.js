@@ -1,4 +1,6 @@
 // api/ebay-search.js
+// Place this file in your Vercel project at: /api/ebay-search.js
+
 export default async function handler(req, res) {
   // Enable CORS for all origins (adjust for production)
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -74,7 +76,27 @@ export default async function handler(req, res) {
       });
     }
 
-    // Return the search results
+    // Clean up the data before sending to frontend
+    if (data.organic_results) {
+      data.organic_results = data.organic_results.map(product => {
+        // Remove shipping field entirely to prevent [object Object] issues
+        const cleanProduct = { ...product };
+        delete cleanProduct.shipping;
+        
+        // Ensure price is properly formatted
+        if (cleanProduct.price && typeof cleanProduct.price === 'object') {
+          if (cleanProduct.price.raw) {
+            cleanProduct.price = cleanProduct.price.raw;
+          } else if (cleanProduct.price.extracted) {
+            cleanProduct.price = `${cleanProduct.price.extracted.toFixed(2)}`;
+          }
+        }
+        
+        return cleanProduct;
+      });
+    }
+
+    // Return the cleaned search results
     res.status(200).json(data);
 
   } catch (error) {
@@ -84,3 +106,62 @@ export default async function handler(req, res) {
     });
   }
 }
+
+// Alternative using the serpapi npm package (recommended)
+// First install: npm install serpapi
+
+/*
+import { getJson } from 'serpapi';
+
+export default async function handler(req, res) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const API_KEY = process.env.SERPAPI_KEY;
+    
+    if (!API_KEY) {
+      return res.status(500).json({ 
+        error: 'SERPAPI_KEY environment variable not set' 
+      });
+    }
+
+    const searchParams = {
+      engine: 'ebay',
+      ebay_domain: 'ebay.com',
+      api_key: API_KEY,
+      ...req.body
+    };
+
+    // Use serpapi package
+    const results = await new Promise((resolve, reject) => {
+      getJson(searchParams, (json) => {
+        if (json.error) {
+          reject(new Error(json.error));
+        } else {
+          resolve(json);
+        }
+      });
+    });
+
+    res.status(200).json(results);
+
+  } catch (error) {
+    console.error('Backend error:', error);
+    res.status(500).json({ 
+      error: 'Failed to search eBay products: ' + error.message 
+    });
+  }
+}
+*/
