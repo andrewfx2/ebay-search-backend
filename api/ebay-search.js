@@ -1,6 +1,41 @@
 // api/ebay-search.js
 // Place this file in your Vercel project at: /api/ebay-search.js
 
+// Comprehensive price cleaning function
+function cleanPriceField(priceData) {
+  // If it's already a string, return as-is
+  if (typeof priceData === 'string') {
+    return priceData;
+  }
+  
+  // If it's not an object or is null/undefined, return fallback
+  if (!priceData || typeof priceData !== 'object') {
+    return 'Price not available';
+  }
+  
+  // Try various common SERPAPI price object structures
+  const attempts = [
+    priceData.raw,                    // {raw: "$25.99"}
+    priceData.formatted,              // {formatted: "$25.99"}  
+    priceData.extracted_value ? `$${priceData.extracted_value.toFixed(2)}` : null,  // {extracted_value: 25.99}
+    priceData.extracted ? `$${priceData.extracted.toFixed(2)}` : null,              // {extracted: 25.99}
+    priceData.value ? `$${priceData.value.toFixed(2)}` : null,                      // {value: 25.99}
+    priceData.amount ? `$${priceData.amount.toFixed(2)}` : null,                    // {amount: 25.99}
+    priceData.price ? `$${priceData.price.toFixed(2)}` : null,                     // {price: 25.99}
+  ];
+  
+  // Return the first valid attempt
+  for (const attempt of attempts) {
+    if (attempt && typeof attempt === 'string' && attempt.trim() !== '') {
+      return attempt;
+    }
+  }
+  
+  // If all attempts failed, return fallback
+  console.warn('Could not parse price object:', priceData);
+  return 'Price not available';
+}
+
 export default async function handler(req, res) {
   // Enable CORS for all origins (adjust for production)
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -83,14 +118,8 @@ export default async function handler(req, res) {
         const cleanProduct = { ...product };
         delete cleanProduct.shipping;
         
-        // Ensure price is properly formatted
-        if (cleanProduct.price && typeof cleanProduct.price === 'object') {
-          if (cleanProduct.price.raw) {
-            cleanProduct.price = cleanProduct.price.raw;
-          } else if (cleanProduct.price.extracted) {
-            cleanProduct.price = `${cleanProduct.price.extracted.toFixed(2)}`;
-          }
-        }
+        // Use the comprehensive price cleaning function
+        cleanProduct.price = cleanPriceField(cleanProduct.price);
         
         return cleanProduct;
       });
@@ -112,6 +141,41 @@ export default async function handler(req, res) {
 
 /*
 import { getJson } from 'serpapi';
+
+// Comprehensive price cleaning function
+function cleanPriceField(priceData) {
+  // If it's already a string, return as-is
+  if (typeof priceData === 'string') {
+    return priceData;
+  }
+  
+  // If it's not an object or is null/undefined, return fallback
+  if (!priceData || typeof priceData !== 'object') {
+    return 'Price not available';
+  }
+  
+  // Try various common SERPAPI price object structures
+  const attempts = [
+    priceData.raw,                    // {raw: "$25.99"}
+    priceData.formatted,              // {formatted: "$25.99"}  
+    priceData.extracted_value ? `$${priceData.extracted_value.toFixed(2)}` : null,  // {extracted_value: 25.99}
+    priceData.extracted ? `$${priceData.extracted.toFixed(2)}` : null,              // {extracted: 25.99}
+    priceData.value ? `$${priceData.value.toFixed(2)}` : null,                      // {value: 25.99}
+    priceData.amount ? `$${priceData.amount.toFixed(2)}` : null,                    // {amount: 25.99}
+    priceData.price ? `$${priceData.price.toFixed(2)}` : null,                     // {price: 25.99}
+  ];
+  
+  // Return the first valid attempt
+  for (const attempt of attempts) {
+    if (attempt && typeof attempt === 'string' && attempt.trim() !== '') {
+      return attempt;
+    }
+  }
+  
+  // If all attempts failed, return fallback
+  console.warn('Could not parse price object:', priceData);
+  return 'Price not available';
+}
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -154,6 +218,20 @@ export default async function handler(req, res) {
         }
       });
     });
+
+    // Clean up the data before sending to frontend
+    if (results.organic_results) {
+      results.organic_results = results.organic_results.map(product => {
+        // Remove shipping field entirely to prevent [object Object] issues
+        const cleanProduct = { ...product };
+        delete cleanProduct.shipping;
+        
+        // Use the comprehensive price cleaning function
+        cleanProduct.price = cleanPriceField(cleanProduct.price);
+        
+        return cleanProduct;
+      });
+    }
 
     res.status(200).json(results);
 
