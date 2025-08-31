@@ -80,6 +80,9 @@ export default async function handler(req, res) {
     serpApiUrl.searchParams.append('engine', 'ebay');
     serpApiUrl.searchParams.append('api_key', API_KEY);
     serpApiUrl.searchParams.append('ebay_domain', 'ebay.com');
+    
+    // Add hardcoded minimum price filter to remove low-value listings
+    serpApiUrl.searchParams.append('_udlo', '5');
 
     // Add all search parameters from the frontend
     Object.keys(searchParams).forEach(key => {
@@ -205,6 +208,7 @@ export default async function handler(req, res) {
       engine: 'ebay',
       ebay_domain: 'ebay.com',
       api_key: API_KEY,
+      _udlo: '5', // Hardcoded minimum price filter to remove low-value listings
       ...req.body
     };
 
